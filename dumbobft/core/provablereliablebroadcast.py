@@ -6,43 +6,10 @@ from typing import List
 import gevent
 from gevent import monkey
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
-#from honeybadgerbft.core.reliablebroadcast import encode, decode
+from honeybadgerbft.core.reliablebroadcast import encode, decode
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
-from pyeclib.ec_iface import ECDriver
 
 monkey.patch_all(thread=False)
-
-
-def encode(K: int, N: int, m):
-    coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-    assert coder.k == K
-    assert coder.m == N - K
-    try:
-        m = m.encode()
-    except AttributeError:
-        pass
-    stripes = [_ for _ in coder.encode(m)]
-    #assert len(stripes[0]) == len(stripes[-1])
-    #print(str(len(stripes[0])))
-    return stripes
-
-def decode(K: int, N: int, stripes: List[bytes]):
-    coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-    #assert len(stripes) == N
-    #assert len(stripes) == coder.k + coder.m
-    blocks = []
-    for block in stripes:
-        if block is None:
-            continue
-        blocks.append(block)
-        if len(blocks) == K:
-            break
-    else:
-        raise ValueError("Too few to recover")
-    rec = coder.decode(blocks)
-    return rec
-
-
 
 
 def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):

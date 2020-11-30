@@ -11,8 +11,8 @@ monkey.patch_all(thread=False)
 from myexperiements.sockettest.dumbo_node import DumboBFTNode
 from myexperiements.sockettest.dumbox_node import DumboXBFTNode
 from myexperiements.sockettest.mule_node import MuleBFTNode
-from network.socket_server import NetworkServer
-from network.socket_client import NetworkClient
+from myexperiements.sockettest.socket_server import NetworkServer
+
 from multiprocessing import Value as mpValue, Queue as mpQueue
 from ctypes import c_bool
 
@@ -96,37 +96,22 @@ if __name__ == '__main__':
 
         recv_q = mpQueue()
         send_q = [mpQueue() for _ in range(N)]
-
-        client_ready = mpValue(c_bool, False)
-        server_ready = mpValue(c_bool, False)
-        net_ready = mpValue(c_bool, False)
-
+        ready = mpValue(c_bool, False)
         stop = mpValue(c_bool, False)
 
-        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, recv_q, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, send_q, client_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, net_ready, stop, P, M, F)
+        #net_server = NetworkServer(my_address[1], my_address[0], i, addresses, recv_q, server_ready, stop)
+        #net_client = NetworkClient(my_address[1], my_address[0], i, addresses, send_q, client_ready, stop)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_q, send_q, ready, stop, P, M, F)
+        net = NetworkServer(my_address[1], my_address[0], i, addresses, recv_q, send_q, ready, stop)
 
-        net_server.start()
-        net_client.start()
+        net.start()
 
-        while not client_ready.value and not server_ready.value:
+        while not ready.value:
             time.sleep(1)
+            gevent.sleep(1)
             print("waiting for network ready...")
 
-        with net_ready.get_lock():
-            net_ready.value = True
-
         bft.run()
-
-        with net_ready.get_lock():
-            stop.value = True
-
-        net_client.terminate()
-        net_client.join()
-        time.sleep(1)
-        net_server.terminate()
-        net_server.join()
 
 
     except FileNotFoundError or AssertionError as e:

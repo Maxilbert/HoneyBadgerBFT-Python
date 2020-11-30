@@ -181,6 +181,8 @@ class NetworkServer (Process):
     def run(self):
         pid = os.getpid()
 
+        print("nodes" + str(self.addresses_list))
+
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         with self.ready.get_lock():
             self.ready.value = False
@@ -196,8 +198,10 @@ class NetworkServer (Process):
     def _address_to_id(self, address: tuple):
         for i in range(self.N):
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
+                print("node " + str(i) + " is at " + str(self.addresses_list))
                 return i
         return int((address[1] - 10000) / 200)
+
     def _set_network_logger(self, id: int):
         logger = logging.getLogger("node-" + str(id))
         logger.setLevel(logging.DEBUG)

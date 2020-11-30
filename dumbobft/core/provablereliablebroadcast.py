@@ -164,7 +164,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 readySent = True
                 digest = PK1.hash_message(str((sid, leader, roothash)))
                 # print((sid, leader, roothash))
-                # print(digest)
+                print(digest)
                 broadcast(('READY', roothash, serialize(SK1.sign(digest))))
 
             #if len(ready[roothash]) >= OutputThreshold and echoCounter[roothash] >= K:
@@ -179,6 +179,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 continue
             try:
                 digest = PK1.hash_message(str((sid, leader, roothash)))
+                print(digest)
                 assert PK1.verify_share(sigma, sender, digest)
             except AssertionError:
                 print("Signature share failed in PRBC!", (sid, pid, sender, msg))

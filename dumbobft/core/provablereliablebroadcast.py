@@ -163,7 +163,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
             if echoCounter[roothash] >= EchoThreshold and not readySent:
                 readySent = True
                 digest = PK1.hash_message(str((sid, leader, roothash)))
-                # print((sid, leader, roothash))
+                print((sid, leader, roothash))
                 print(digest)
                 broadcast(('READY', roothash, serialize(SK1.sign(digest))))
 
@@ -179,6 +179,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 continue
             try:
                 digest = PK1.hash_message(str((sid, leader, roothash)))
+                print(str((sid, leader, roothash)))
                 print(digest)
                 assert PK1.verify_share(sigma, sender, digest)
             except AssertionError:

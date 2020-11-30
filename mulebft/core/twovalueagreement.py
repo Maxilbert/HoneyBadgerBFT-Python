@@ -8,7 +8,7 @@ import logging
 
 from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 logger = logging.getLogger(__name__)
 #logger.setLevel(logging.DEBUG)

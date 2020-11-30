@@ -5,10 +5,12 @@ import gevent
 import os
 import pickle
 
-from gevent import time
+from gevent import time, monkey
 from dumbobft.core.dumbo import Dumbo
 from myexperiements.sockettest.make_random_tx import tx_generator
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process
+
+monkey.patch_all(thread=False, socket=False)
 
 
 def load_key(id):

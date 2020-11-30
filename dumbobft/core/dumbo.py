@@ -16,7 +16,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublic
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))

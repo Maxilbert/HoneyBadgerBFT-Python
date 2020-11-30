@@ -13,7 +13,7 @@ from coincurve import PrivateKey, PublicKey
 from multiprocessing import Value as mpValue, Queue as mpQueue, Process
 
 #monkey.patch_all(thread=False, socket=False)
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 
 def load_key(id, N):

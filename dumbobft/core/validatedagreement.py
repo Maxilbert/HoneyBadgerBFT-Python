@@ -16,7 +16,7 @@ from dumbobft.core.consistentbroadcast import consistentbroadcast
 from honeybadgerbft.exceptions import UnknownTagError
 from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 
 class MessageTag(Enum):

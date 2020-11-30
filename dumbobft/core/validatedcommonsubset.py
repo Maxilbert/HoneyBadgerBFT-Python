@@ -7,7 +7,7 @@ from dumbobft.core.validatedagreement import validatedagreement
 from gevent.queue import Queue
 from honeybadgerbft.exceptions import UnknownTagError
 
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 
 class MessageTag(Enum):

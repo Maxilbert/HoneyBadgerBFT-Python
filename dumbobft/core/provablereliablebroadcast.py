@@ -10,7 +10,7 @@ from honeybadgerbft.crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from pyeclib.ec_iface import ECDriver
 
-monkey.patch_all(thread=False)
+monkey.patch_all(thread=False, socket=False)
 
 
 def encode(K: int, N: int, m):

@@ -44,9 +44,8 @@ class NetworkServer (Process):
 
         super().__init__()
 
-    def _handle_ingoing_msg(self, sock, address):
+    def _handle_ingoing_msg(self, sock, jid):
 
-        jid = self._address_to_id(address)
         buf = b''
         try:
             while not self.stop.value:
@@ -82,7 +81,6 @@ class NetworkServer (Process):
         self.logger.info('node %d\'s socket server starts to listen ingoing connections on process id %d' % (self.id, pid))
         print("my IP is " + self.ip)
         self.server_sock = socket.socket()
-        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_sock.bind((self.ip, self.port))
         self.server_sock.listen(5)
         handle_msg_threads = []
@@ -90,7 +88,8 @@ class NetworkServer (Process):
             gevent.sleep(0)
             time.sleep(0)
             sock, address = self.server_sock.accept()
-            msg_t = gevent.spawn(self._handle_ingoing_msg, sock, address)
+            jid = self._address_to_id(address)
+            msg_t = gevent.spawn(self._handle_ingoing_msg, sock, jid)
             handle_msg_threads.append(msg_t)
             self.logger.info('node id %d accepts a new socket from node %d' % (self.id, self._address_to_id(address)))
             gevent.sleep(0)
@@ -181,7 +180,7 @@ class NetworkServer (Process):
     def run(self):
         pid = os.getpid()
 
-        print("nodes" + str(self.addresses_list))
+        self.logger.info("nodes" + str(self.addresses_list))
 
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         with self.ready.get_lock():
@@ -197,9 +196,9 @@ class NetworkServer (Process):
 
     def _address_to_id(self, address: tuple):
         for i in range(self.N):
-            print(address)
+            self.logger.info(address)
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
-                print("node " + str(i) + " is at " + str(self.addresses_list))
+                self.logger.info("node " + str(i) + " is at " + str(self.addresses_list))
                 return i
         return int((address[1] - 10000) / 200)
 

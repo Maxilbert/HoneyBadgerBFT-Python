@@ -197,6 +197,7 @@ class NetworkServer (Process):
 
     def _address_to_id(self, address: tuple):
         for i in range(self.N):
+            print(address)
             if address[0] != '127.0.0.1' and address[0] == self.addresses_list[i][0]:
                 print("node " + str(i) + " is at " + str(self.addresses_list))
                 return i

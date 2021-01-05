@@ -1,5 +1,7 @@
 import time
 import traceback
+from datetime import datetime
+
 import gevent
 from collections import namedtuple
 from enum import Enum
@@ -120,12 +122,14 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     """ 
     """
 
-    def broadcast_input():
+    def wait_for_input():
         v = input()
+        if logger != None:
+            logger.info("VACS %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
         #assert predicate(pid, v)
         send(-1, ('VACS_VAL', v))
 
-    gevent.spawn(broadcast_input)
+    gevent.spawn(wait_for_input)
 
     values = [None] * N
     while True:
@@ -139,5 +143,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
+    
+    if logger != None:
+        logger.info("VACS %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
 
     vaba.kill()

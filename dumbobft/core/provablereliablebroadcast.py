@@ -1,4 +1,5 @@
 # coding=utf-8
+from datetime import datetime
 import time
 from collections import defaultdict
 from typing import List
@@ -117,6 +118,8 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         def wait_for_input():
             m = input()  # block until an input is received
             #print("RBC input received: ", m)
+            if logger != None:
+                logger.info("ABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
             # assert isinstance(m, (str, bytes))
             # print('Input received: %d bytes' % (len(m),))
             stripes = encode(K, N, m)
@@ -232,6 +235,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 value = decode_output(roothash)
                 proof = (sid, roothash, serialize(Sigma))
                 #print("RBC finished for leader", leader)
-                end = time.time()
-
+                if logger != None:
+                    logger.info(
+                        "ABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
                 return value, proof

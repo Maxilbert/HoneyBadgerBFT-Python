@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 
 import gevent
 from collections import defaultdict
@@ -60,6 +61,8 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
         #print("block to wait for CBC input")
         def wait_for_input():
             m = input() # block until an input is received
+            if logger != None:
+                logger.info("CBC %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
             #print("CBC input received: ", m)
             #assert isinstance(m, (str, bytes, list, tuple))
             digestFromLeader = PK1.hash_message(str((sid, leader, m)))
@@ -67,6 +70,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
             cbc_echo_sshares[pid] = SK1.sign(digestFromLeader)
             send(-1, ('CBC_SEND', m))
             #print("Leader %d broadcasts CBC SEND messages" % leader)
+
         gevent.spawn(wait_for_input)
 
     # Handle all consensus messages
@@ -126,6 +130,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
                 print("Signature failed!", (sid, pid, j, msg))
                 continue
             #print("CBC finished for leader", leader)
-            end = time.time()
+            if logger != None:
+                logger.info("CBC %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
 
             return m, raw_Sigma

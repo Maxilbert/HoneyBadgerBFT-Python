@@ -2,6 +2,8 @@ import copy
 import time
 import traceback
 import logging
+from datetime import datetime
+
 import gevent
 import numpy as np
 from collections import namedtuple
@@ -191,6 +193,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     def wait_for_input():
         v = input()
+        if logger != None:
+            logger.info("VABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
         #assert predicate(v)
         my_cbc_input.put_nowait(v)
 
@@ -340,13 +344,11 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         aba_inputs[r].put_nowait(aba_r_input)
         aba_r = aba_outputs[r].get()
         # print("Round", r, "ABA outputs", aba_r)
-
         if aba_r == 1:
             break
-
         r += 1
 
     assert a is not None
-
-
+    if logger != None:
+        logger.info("VABA %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
     decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that

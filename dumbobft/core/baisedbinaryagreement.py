@@ -1,3 +1,5 @@
+import time
+
 import gevent
 from gevent import monkey
 from gevent.event import Event
@@ -7,16 +9,11 @@ from honeybadgerbft.exceptions import RedundantMessageError, AbandonedNodeError
 
 
 
-logger = logging.getLogger(__name__)
-
-
 
 def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):
     _, r, v = message
     assert v in ((0,), (1,), (0, 1))
     if sender in conf_values[r][v]:
-        logger.warn(f'Redundant CONF received {message} by {sender}',
-                    extra={'nodeid': pid, 'epoch': r})
         # FIXME: Raise for now to simplify things & be consistent
         # with how other TAGs are handled. Will replace the raise
         # with a continue statement as part of
@@ -25,10 +22,6 @@ def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):
             'Redundant CONF received {}'.format(message))
 
     conf_values[r][v].add(sender)
-    logger.debug(
-        f'add v = {v} to conf_value[{r}] = {conf_values[r]}',
-        extra={'nodeid': pid, 'epoch': r},
-    )
 
     bv_signal.set()
 
@@ -36,15 +29,11 @@ def handle_conf_messages(*, sender, message, conf_values, pid, bv_signal):
 def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
                          values, conf_values, bv_signal, broadcast):
     conf_sent[epoch][tuple(values)] = True
-    logger.debug(f"broadcast {('CONF', epoch, tuple(values))}",
-                 extra={'nodeid': pid, 'epoch': epoch})
+
     broadcast(('CONF', epoch, tuple(bin_values[epoch])))
     while True:
 
-        logger.debug(
-            f'looping ... conf_values[epoch] is: {conf_values[epoch]}',
-            extra={'nodeid': pid, 'epoch': epoch},
-        )
+
         if 1 in bin_values[epoch] and len(conf_values[epoch][(1,)]) >= N - f:
             return set((1,))
         if 0 in bin_values[epoch] and len(conf_values[epoch][(0,)]) >= N - f:
@@ -58,7 +47,7 @@ def wait_for_conf_values(*, pid, N, f, epoch, conf_sent, bin_values,
         bv_signal.wait()
 
 
-def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
+def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send, logger=None):
     """Binary consensus from [MMR14]. It takes an input ``vi`` and will
     finally write the decided value into ``decide`` channel.
 
@@ -93,66 +82,32 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             #gevent.sleep(0.0001)
 
             (sender, msg) = receive()
-            logger.debug(f'receive {msg} from node {sender}',
-                         extra={'nodeid': pid, 'epoch': msg[1]})
+
             assert sender in range(N)
             if msg[0] == 'EST':
                 # BV_Broadcast message
                 _, r, v = msg
                 assert v in (0, 1)
-                if sender in est_values[r][v]:
-                    # FIXME: raise or continue? For now will raise just
-                    # because it appeared first, but maybe the protocol simply
-                    # needs to continue.
-                    # print(f'Redundant EST received by {sender}', msg)
-                    logger.warn(
-                        f'Redundant EST message received by {sender}: {msg}',
-                        extra={'nodeid': pid, 'epoch': msg[1]}
-                    )
-                    #raise RedundantMessageError(
-                    #    'Redundant EST received {}'.format(msg))
-                    continue
 
                 est_values[r][v].add(sender)
                 # Relay after reaching first threshold
                 if len(est_values[r][v]) >= f + 1 and not est_sent[r][v]:
                     est_sent[r][v] = True
                     broadcast(('EST', r, v))
-                    logger.debug(f"broadcast {('EST', r, v)}",
-                                 extra={'nodeid': pid, 'epoch': r})
 
                 # Output after reaching second threshold
                 if len(est_values[r][v]) >= 2 * f + 1:
-                    logger.debug(
-                        f'add v = {v} to bin_value[{r}] = {bin_values[r]}',
-                        extra={'nodeid': pid, 'epoch': r},
-                    )
+
                     bin_values[r].add(v)
-                    logger.debug(f'bin_values[{r}] is now: {bin_values[r]}',
-                                 extra={'nodeid': pid, 'epoch': r})
+
                     bv_signal.set()
 
             elif msg[0] == 'AUX':
                 # Aux message
                 _, r, v = msg
                 assert v in (0, 1)
-                if sender in aux_values[r][v]:
-                    # FIXME: raise or continue? For now will raise just
-                    # because it appeared first, but maybe the protocol simply
-                    # needs to continue.
-                    print('Redundant AUX received', msg)
-                    raise RedundantMessageError(
-                        'Redundant AUX received {}'.format(msg))
 
-                logger.debug(
-                    f'add sender = {sender} to aux_value[{r}][{v}] = {aux_values[r][v]}',
-                    extra={'nodeid': pid, 'epoch': r},
-                )
                 aux_values[r][v].add(sender)
-                logger.debug(
-                    f'aux_value[{r}][{v}] is now: {aux_values[r][v]}',
-                    extra={'nodeid': pid, 'epoch': r},
-                )
 
                 bv_signal.set()
 
@@ -176,6 +131,8 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
     # Block waiting for the input
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
     vi = input()
+
+    start = time.time()
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
 
     assert vi in (0, 1)
@@ -186,8 +143,6 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
         # print("debug", pid, sid, 'deciding', already_decided, "at epoch", r)
 
-        logger.info(f'Starting with est = {est}',
-                    extra={'nodeid': pid, 'epoch': r})
 
         if not est_sent[r][est]:
             est_sent[r][est] = True
@@ -203,20 +158,12 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
         # print("debug", pid, sid, 'GETS BIN VAL at epoch', r)
 
         w = next(iter(bin_values[r]))  # take an element
-        logger.debug(f"broadcast {('AUX', r, w)}",
-                     extra={'nodeid': pid, 'epoch': r})
-        broadcast(('AUX', r, w))
 
-        logger.debug(
-            f'block until at least N-f ({N-f}) AUX values are received',
-            extra={'nodeid': pid, 'epoch': r})
+        broadcast(('AUX', r, w))
 
         while True:
 
-            logger.debug(f'bin_values[{r}]: {bin_values[r]}',
-                         extra={'nodeid': pid, 'epoch': r})
-            logger.debug(f'aux_values[{r}]: {aux_values[r]}',
-                         extra={'nodeid': pid, 'epoch': r})
+
             # Block until at least N-f AUX values are received
             if 1 in bin_values[r] and len(aux_values[r][1]) >= N - f:
                 values = set((1,))
@@ -233,13 +180,10 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             bv_signal.clear()
             bv_signal.wait()
 
-        logger.debug(f'Completed AUX phase with values = {values}',
-                     extra={'nodeid': pid, 'epoch': r})
+
 
         # CONF phase
-        logger.debug(
-            f'block until at least N-f ({N-f}) CONF values are received',
-            extra={'nodeid': pid, 'epoch': r})
+
         if not conf_sent[r][tuple(values)]:
             values = wait_for_conf_values(
                 pid=pid,
@@ -254,13 +198,7 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
                 broadcast=broadcast,
             )
 
-        logger.debug(f'Completed CONF phase with values = {values}',
-                     extra={'nodeid': pid, 'epoch': r})
 
-        logger.debug(
-            f'Block until receiving the common coin value',
-            extra={'nodeid': pid, 'epoch': r},
-        )
         # Block until receiving the common coin value
 
         # print("debug", pid, sid, 'fetchs a coin at epoch', r)
@@ -270,35 +208,39 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
             s = coin(r)
         # print("debug", pid, sid, 'gets a coin', s, 'at epoch', r)
 
-        logger.info(f'Received coin with value = {s}',
-                    extra={'nodeid': pid, 'epoch': r})
+
 
         try:
             est, already_decided = set_new_estimate(
+                sid=sid,
+                start=start,
                 values=values,
                 s=s,
                 already_decided=already_decided,
                 decide=decide,
+                logger=logger,
             )
             # print('debug then decided:', already_decided, '%s' % sid)
         except AbandonedNodeError:
             # print('debug node %d quits %s' % (pid, sid))
             # print('[sid:%s] [pid:%d] QUITTING in round %d' % (sid,pid,r)))
-            logger.debug(f'QUIT!',
-                         extra={'nodeid': pid, 'epoch': r})
+
             _thread_recv.kill()
             return
 
         r += 1
 
 
-def set_new_estimate(*, values, s, already_decided, decide):
+def set_new_estimate(*, sid, start, values, s, already_decided, decide, logger):
     if len(values) == 1:
         v = next(iter(values))
         if v == s:
             if already_decided is None:
                 already_decided = v
                 decide(v)
+                end = time.time()
+                if logger != None:
+                    logger.info("ABA %s spends %f seconds to complete" % (sid, end - start))
             elif already_decided == v:
                 # Here corresponds to a proof that if one party
                 # decides at round r, then in all the following

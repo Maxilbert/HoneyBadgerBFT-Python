@@ -1,3 +1,5 @@
+import time
+
 import gevent
 from collections import defaultdict
 
@@ -5,7 +7,7 @@ from gevent import monkey
 
 from crypto.threshsig.boldyreva import serialize, deserialize1
 
-def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
+def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, logger=None):
     """Consistent broadcast
     :param str sid: session identifier
     :param int pid: ``0 <= pid < N``
@@ -60,6 +62,8 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
         # The leader sends the input to each participant
         #print("block to wait for CBC input")
         m = input() # block until an input is received
+        start = time.time()
+
         #print("CBC input received: ", m)
         assert isinstance(m, (str, bytes, list, tuple))
         digestFromLeader = PK1.hash_message(str((sid, leader, m)))
@@ -125,4 +129,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send):
                 print("Signature failed!", (sid, pid, j, msg))
                 continue
             #print("CBC finished for leader", leader)
+            end = time.time()
+            if logger != None and pid == leader:
+                logger.info("CBC %s spends %f seconds to complete" % (sid, end - start))
             return m, raw_Sigma

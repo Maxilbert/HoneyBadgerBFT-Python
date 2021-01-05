@@ -37,7 +37,7 @@ def vacs_msg_receiving_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True):
+def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True, logger=None):
     """Validated vector consensus. It takes an input ``vi`` and will
     finally writes the decided value (i.e., a vector of different nodes' vi) into ``decide`` channel.
     Each vi is validated by a predicate function predicate(i, vi)
@@ -59,10 +59,10 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     #print("Starts to run validated common subset...")
 
-    assert PK.k == f + 1
-    assert PK.l == N
-    assert PK1.k == N - f
-    assert PK1.l == N
+    #assert PK.k == f + 1
+    #assert PK.l == N
+    #assert PK1.k == N - f
+    #assert PK1.l == N
 
     """ 
     """
@@ -109,7 +109,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
         return vaba_predicate
 
     vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1,
-                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate())
+                        vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate(), logger)
 
     """ 
     """
@@ -120,7 +120,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     """
 
     v = input()
-    assert predicate(pid, v)
+    #assert predicate(pid, v)
 
     for k in range(N):
         send(k, ('VACS_VAL', v))
@@ -137,4 +137,4 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
-    vaba.kill()
+    #vaba.kill()

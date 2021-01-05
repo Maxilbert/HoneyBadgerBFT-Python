@@ -1,4 +1,5 @@
 import logging
+import time
 
 from crypto.threshsig.boldyreva import g12deserialize, g12serialize
 from collections import defaultdict
@@ -7,7 +8,6 @@ from gevent.queue import Queue
 import hashlib
 
 
-logger = logging.getLogger(__name__)
 
 
 class CommonCoinFailureException(Exception):
@@ -19,7 +19,7 @@ def hash(x):
     return hashlib.sha256(x).digest()
 
 
-def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
+def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True, logger=None):
     """A shared coin based on threshold signatures
 
     :param sid: a unique instance id
@@ -33,21 +33,22 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
     :param single_bit: is the output coin a single bit or not ?
     :return: a function ``getCoin()``, where ``getCoin(r)`` blocks
     """
-    assert PK.k == f+1
-    assert PK.l == N    # noqa: E741
+    #assert PK.k == f+1
+    #assert PK.l == N    # noqa: E741
+
+    start = time.time()
+
     received = defaultdict(dict)
     outputQueue = defaultdict(lambda: Queue(1))
 
     def _recv():
         while True:     # main receive loop
 
-            logger.debug(f'entering loop',
-                         extra={'nodeid': pid, 'epoch': '?'})
+
             # New shares for some round r, from sender i
             (i, (_, r, raw_sig)) = receive()
             sig = g12deserialize(raw_sig)
-            logger.debug(f'received i, _, r, sig: {i, _, r, sig}',
-                         extra={'nodeid': pid, 'epoch': r})
+
             assert i in range(N)
             # assert r >= 0  ### Comment this line since round r can be a string
             if i in received[r]:
@@ -72,10 +73,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
 
             # After reaching the threshold, compute the output and
             # make it available locally
-            logger.debug(
-                f'if len(received[r]) == f + 1: {len(received[r]) == f + 1}',
-                extra={'nodeid': pid, 'epoch': r},
-            )
+
             if len(received[r]) == f + 1:
 
                 # Verify and get the combined signature
@@ -87,12 +85,8 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
                 coin = hash(g12serialize(sig))[0]
                 if single_bit:
                     bit = coin % 2
-                    logger.debug(f'put coin {bit} in output queue',
-                             extra={'nodeid': pid, 'epoch': r})
                     outputQueue[r].put_nowait(bit)
                 else:
-                    logger.debug(f'put coin {coin} in output queue',
-                             extra={'nodeid': pid, 'epoch': r})
                     outputQueue[r].put_nowait(coin)
 
     #greenletPacker(Greenlet(_recv), 'shared_coin', (pid, N, f, broadcast, receive)).start()
@@ -113,14 +107,16 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True):
         # print('debug-PK', pid, PK.VKs[pid], PK.l, PK.k, PK.VK)
         # print('debug', pid, type(SK.sign(h)), type(h), type(SK.SK), type(PK.VKs[pid]))
         # print('debug', pid, ismember(SK.sign(h)), ismember(h), ismember(SK.SK), ismember(PK.VKs[pid]))
-        logger.debug(f"broadcast {('COIN', round, SK.sign(h))}",
-                     extra={'nodeid': pid, 'epoch': round})
+
         sig = SK.sign(h)
         sig.initPP()
         broadcast(('COIN', round, g12serialize(sig)))
         PK.verify_share(sig, pid, h)
         coin = outputQueue[round].get()
         #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
+        end = time.time()
+        if logger != None:
+            logger.info("Coin %s spends %f seconds to complete" % (sid, end-start))
         return coin
 
     return getCoin

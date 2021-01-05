@@ -1,4 +1,5 @@
 import copy
+import time
 import traceback
 import logging
 import gevent
@@ -51,10 +52,9 @@ def recv_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-logger = logging.getLogger(__name__)
 
 
-def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda x: True):
+def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda x: True, logger=None):
     """Multi-valued Byzantine consensus. It takes an input ``vi`` and will
     finally writes the decided value into ``decide`` channel.
 
@@ -136,7 +136,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # Only leader gets input
         cbc_input = my_cbc_input.get if j == pid else None
         cbc = gevent.spawn(consistentbroadcast, sid + 'CBC' + str(j), pid, N, f, PK1, SK1, j,
-                           cbc_input, cbc_recvs[j].get, make_cbc_send(j))
+                           cbc_input, cbc_recvs[j].get, make_cbc_send(j), logger)
         # cbc.get is a blocking function to get cbc output
         cbc_outputs[j] = cbc.get
 
@@ -158,7 +158,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # Only leader gets input
         commit_input = my_commit_input.get if j == pid else None
         commit = gevent.spawn(consistentbroadcast, sid + 'COMMIT-CBC' + str(j), pid, N, f, PK1, SK1, j,
-                           commit_input, commit_recvs[j].get, make_commit_send(j))
+                           commit_input, commit_recvs[j].get, make_commit_send(j), logger)
         # commit.get is a blocking function to get commit-cbc output
         commit_outputs[j] = commit.get
 
@@ -172,7 +172,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         send(-1, ('VABA_COIN', 'leader_election', o))
 
     permutation_coin = shared_coin(sid + 'COIN', pid, N, f,
-                               PK, SK, coin_bcast, coin_recv.get, False)
+                               PK, SK, coin_bcast, coin_recv.get, False, logger)
     # False means to get a coin of 256 bits instead of a single bit
 
     """ 
@@ -190,7 +190,8 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
     cbc_values = [None] * N
 
     v = input()
-    assert predicate(v)
+    start = time.time()
+    #assert predicate(v)
     my_cbc_input.put_nowait(v)
 
     wait_cbc_signal = Event()
@@ -317,7 +318,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
         coin = shared_coin(sid + 'COIN' + str(r), pid, N, f,
                            PK, SK,
-                           aba_coin_bcast, aba_coin_recvs[r].get)
+                           aba_coin_bcast, aba_coin_recvs[r].get, logger)
 
         def make_aba_send(rnd): # this make will automatically deep copy the enclosed send func
             def aba_send(k, o):
@@ -332,7 +333,7 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         # Only leader gets input
         aba = gevent.spawn(baisedbinaryagreement, sid + 'ABA' + str(r), pid, N, f, coin,
                      aba_inputs[r].get, aba_outputs[r].put_nowait,
-                     aba_recvs[r].get, make_aba_send(r))
+                     aba_recvs[r].get, make_aba_send(r), logger)
         # aba.get is a blocking function to get aba output
         aba_inputs[r].put_nowait(aba_r_input)
         aba_r = aba_outputs[r].get()
@@ -344,4 +345,9 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
         r += 1
 
     assert a is not None
+
+    end = time.time()
+    if logger != None:
+        logger.info("MVBA %s spends %f seconds to complete" % (sid, end - start))
+
     decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that

@@ -248,7 +248,7 @@ class Dumbo():
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
             prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
-                               prbc_input, prbc_recvs[j].get, prbc_send)
+                               prbc_input, prbc_recvs[j].get, prbc_send, self.logger)
             prbc_thread.start()
             prbc_outputs[j] = prbc_thread.get  # block for output from rbc
 
@@ -270,7 +270,7 @@ class Dumbo():
 
             vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
                          vacs_input.get, vacs_output.put_nowait,
-                         vacs_recv.get, vacs_send, vacs_predicate)
+                         vacs_recv.get, vacs_send, vacs_predicate, self.logger)
             vacs_thread.start()
 
         # N instances of PRBC

@@ -46,9 +46,18 @@ class MuleBFTNode (Mule):
 
     def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, recv_queue: Queue, send_queues: List[Queue], ready: Event, stop: Event, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
-        #self.recv_queue = recv_q
-        #self.send_queue = send_q
-        self.send = lambda j, o: send_queues[j].put_nowait(o)
+
+        def make_send():
+            def send(j, o):
+                if j == -1:
+                    for _ in range(N):
+                        send_queues[_].put_nowait(o)
+                else:
+                    send_queues[j].put_nowait(o)
+
+            return send
+
+        self.send = make_send()
         self.recv = lambda: recv_queue.get()
         self.ready = ready
         self.stop = stop

@@ -1,27 +1,23 @@
-import time
 import pickle
 from typing import List, Callable
-
 import gevent
 import os
-
-from multiprocessing import Value as mpValue, Process
-from gevent import socket, monkey, lock
+from gevent.event import Event
+from gevent import socket, monkey, lock, Greenlet
 from gevent.queue import Queue
 
 import logging
 import traceback
 
-monkey.patch_all()
 
 
 
 # Network node class: deal with socket communications
-class NetworkClient (Process):
+class NetworkClient (Greenlet):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: Event, stop: Event):
 
         self.client_from_bft = client_from_bft
         self.ready = client_ready
@@ -46,14 +42,13 @@ class NetworkClient (Process):
     def _connect_and_send_forever(self):
         pid = os.getpid()
         self.logger.info('node %d\'s socket client starts to make outgoing connections on process id %d' % (self.id, pid))
-        while not self.stop.value:
+        while not self.stop.is_set():
             try:
                 for j in range(self.N):
                     if not self.is_out_sock_connected[j]:
                         self.is_out_sock_connected[j] = self._connect(j)
                 if all(self.is_out_sock_connected):
-                    with self.ready.get_lock():
-                        self.ready.value = True
+                    self.ready.set()
                     break
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
@@ -73,7 +68,7 @@ class NetworkClient (Process):
             return False
 
     def _send(self, j: int):
-        while not self.stop.value:
+        while not self.stop.is_set():
             gevent.sleep(0)
             #self.sock_locks[j].acquire()
             o = self.sock_queues[j].get()
@@ -88,7 +83,7 @@ class NetworkClient (Process):
     ##
     ##
     def _handle_send_loop(self):
-        while not self.stop.value:
+        while not self.stop.is_set():
             try:
                 j, o = self.client_from_bft()
                 #o = self.send_queue[j].get_nowait()
@@ -109,18 +104,16 @@ class NetworkClient (Process):
 
         #print("sending loop quits ...")
 
-    def run(self):
+    def _run(self):
         self.logger = self._set_client_logger(self.id)
         pid = os.getpid()
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
-        with self.ready.get_lock():
-            self.ready.value = False
+        self.ready.clear()
         self._connect_and_send_forever()
 
 
     def stop_service(self):
-        with self.stop.get_lock():
-            self.stop.value = True
+        self.stop.set()
 
 
     def _set_client_logger(self, id: int):

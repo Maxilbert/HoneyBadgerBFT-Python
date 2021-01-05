@@ -11,8 +11,6 @@ from mulebft.core.hsfastpath import hsfastpath
 from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from crypto.ecdsa.ecdsa import PrivateKey
 
-monkey.patch_all()
-
 
 def set_consensus_log(id: int):
     logger = logging.getLogger("consensus-node-"+str(id))

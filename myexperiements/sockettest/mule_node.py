@@ -2,11 +2,10 @@ import random
 from typing import Callable
 import os
 import pickle
-from gevent import time
 from mulebft.core.mule import Mule
 from myexperiements.sockettest.make_random_tx import tx_generator
 from coincurve import PrivateKey, PublicKey
-from multiprocessing import Value as mpValue
+from gevent.event import Event
 
 
 def load_key(id, N):
@@ -42,7 +41,7 @@ def load_key(id, N):
 
 class MuleBFTNode (Mule):
 
-    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: mpValue, stop: mpValue, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: Event, stop: Event, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
         #self.recv_queue = recv_q
         #self.send_queue = send_q
@@ -78,11 +77,10 @@ class MuleBFTNode (Mule):
 
         self.prepare_bootstrap()
 
-        while not self.ready.value:
-            time.sleep(1)
+        self.ready.wait()
 
         self.run_bft()
-        self.stop.value = True
+        self.stop.set()
 
 
 def main(sid, i, S, T, B, N, f, addresses, K):

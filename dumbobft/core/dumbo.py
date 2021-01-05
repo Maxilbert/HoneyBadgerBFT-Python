@@ -14,7 +14,6 @@ from dumbobft.core.validatedcommonsubset import validatedcommonsubset
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
-monkey.patch_all()
 
 
 def set_consensus_log(id: int):
@@ -311,6 +310,7 @@ class Dumbo():
         dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,
                            vacs_input.put_nowait,
                            vacs_output.get)
+
         dumboacs_thread.start()
 
         recv_queues = BroadcastReceiverQueues(
@@ -318,6 +318,7 @@ class Dumbo():
             ACS_VACS=vacs_recv,
             TPKE=tpke_recv,
         )
+
         bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
         bc_recv_loop_thread.start()
 

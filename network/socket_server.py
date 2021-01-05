@@ -1,22 +1,21 @@
 import gevent
 from gevent.server import StreamServer
-from gevent import lock, monkey, socket
+from gevent import lock, monkey, socket, Greenlet
+from gevent.event import Event
 import pickle
 from typing import Callable
 import os
 import logging
 import traceback
-from multiprocessing import Value as mpValue, Process
 
-monkey.patch_all()
 
 
 # Network node class: deal with socket communications
-class NetworkServer (Process):
+class NetworkServer (Greenlet):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: mpValue, stop: mpValue):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: Event, stop: Event):
 
         self.server_to_bft = server_to_bft
         self.ready = server_ready
@@ -39,7 +38,7 @@ class NetworkServer (Process):
             jid = self._address_to_id(address)
             buf = b''
             try:
-                while not self.stop.value:
+                while not self.stop.is_set():
                     buf += sock.recv(9000)
                     tmp = buf.split(self.SEP, 1)
                     while len(tmp) == 2:
@@ -62,13 +61,15 @@ class NetworkServer (Process):
         self.streamServer = StreamServer((self.ip, self.port), _handler)
         self.streamServer.serve_forever()
 
-    def run(self):
+    def _run(self):
         pid = os.getpid()
         self.logger = self._set_server_logger(self.id)
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
-        with self.ready.get_lock():
-            self.ready.value = False
+        self.ready.clear()
         self._listen_and_recv_forever()
+
+    def stop_service(self):
+        self.stop.set()
 
     def _address_to_id(self, address: tuple):
         for i in range(self.N):

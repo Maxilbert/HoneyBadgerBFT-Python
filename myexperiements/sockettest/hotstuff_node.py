@@ -1,3 +1,5 @@
+from gevent.queue import Queue
+
 from stablehotstuff.stablehotstuff import Hotstuff
 from typing import List, Callable
 import os
@@ -39,12 +41,10 @@ def load_key(id, N):
 
 class HotstuffBFTNode (Hotstuff):
 
-    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, bft_from_server: Callable, bft_to_client: Callable, ready: Event, stop: Event, K=3, mode='debug', mute=False, tx_buffer=None):
+    def __init__(self, sid, id, S, T, Bfast, Bacs, N, f, recv_queue: Queue, send_queues: List[Queue], ready: Event, stop: Event, K=3, mode='debug', mute=False, tx_buffer=None):
         self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
-        #self.recv_queue = recv_q
-        #self.send_queue = send_q
-        self.bft_from_server = bft_from_server
-        self.bft_to_client = bft_to_client
+        self.send = lambda j, o: send_queues[j].put_nowait(o)
+        self.recv = lambda: recv_queue.get()
         self.ready = ready
         self.stop = stop
         self.mode = mode
@@ -72,8 +72,8 @@ class HotstuffBFTNode (Hotstuff):
         pid = os.getpid()
         self.logger.info('node %d\'s starts to run consensus on process id %d' % (self.id, pid))
 
-        self._send = lambda j, o: self.bft_to_client((j, o))
-        self._recv = lambda: self.bft_from_server()
+        self._send = self.send
+        self._recv = self.recv
 
         self.prepare_bootstrap()
 

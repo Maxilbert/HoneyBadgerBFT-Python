@@ -1,4 +1,5 @@
 import gevent
+from gevent.queue import Queue
 from gevent.server import StreamServer
 from gevent import lock, monkey, socket, Greenlet
 from gevent.event import Event
@@ -15,9 +16,9 @@ class NetworkServer (Greenlet):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, server_to_bft: Callable, server_ready: Event, stop: Event):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, recv_queue: Queue, server_ready: Event, stop: Event):
 
-        self.server_to_bft = server_to_bft
+        self.recv_queue = recv_queue
         self.ready = server_ready
         self.stop = stop
         self.ip = my_ip
@@ -47,7 +48,7 @@ class NetworkServer (Greenlet):
                         if data != '' and data:
                             (j, o) = (jid, pickle.loads(data))
                             # assert j in range(self.N)
-                            self.server_to_bft((j, o))
+                            self.recv_queue.put_nowait((j, o))
                             # self.logger.info('recv' + str((j, o)))
                             # print('recv' + str((j, o)))
                         else:

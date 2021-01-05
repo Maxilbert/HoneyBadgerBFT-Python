@@ -9,7 +9,6 @@ from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, m
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 #from pyeclib.ec_iface import ECDriver
 
-monkey.patch_all()
 
 #
 # def encode(K: int, N: int, m):

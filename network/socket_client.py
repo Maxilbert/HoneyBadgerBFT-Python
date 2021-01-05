@@ -17,9 +17,9 @@ class NetworkClient (Greenlet):
 
     SEP = '\r\nSEP\r\nSEP\r\nSEP\r\n'.encode('utf-8')
 
-    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, client_from_bft: Callable, client_ready: Event, stop: Event):
+    def __init__(self, port: int, my_ip: str, id: int, addresses_list: list, send_queues: List[Queue], client_ready: Event, stop: Event):
 
-        self.client_from_bft = client_from_bft
+        self.send_queues = send_queues
         self.ready = client_ready
         self.stop = stop
 
@@ -33,7 +33,6 @@ class NetworkClient (Greenlet):
         self.is_out_sock_connected = [False] * self.N
 
         self.socks = [None for _ in self.addresses_list]
-        self.sock_queues = [Queue() for _ in self.addresses_list]
         self.sock_locks = [lock.Semaphore() for _ in self.addresses_list]
 
         super().__init__()
@@ -53,8 +52,8 @@ class NetworkClient (Greenlet):
             except Exception as e:
                 self.logger.info(str((e, traceback.print_exc())))
         send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
-        self._handle_send_loop()
-        #gevent.joinall(send_threads)
+        #self._handle_send_loop()
+        gevent.joinall(send_threads)
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -71,7 +70,7 @@ class NetworkClient (Greenlet):
         while not self.stop.is_set():
             gevent.sleep(0)
             #self.sock_locks[j].acquire()
-            o = self.sock_queues[j].get()
+            o = self.send_queues[j].get()
             try:
                 self.socks[j].sendall(pickle.dumps(o) + self.SEP)
             except Exception as e1:
@@ -80,29 +79,6 @@ class NetworkClient (Greenlet):
                 pass
             #self.sock_locks[j].release()
 
-    ##
-    ##
-    def _handle_send_loop(self):
-        while not self.stop.is_set():
-            try:
-                j, o = self.client_from_bft()
-                #o = self.send_queue[j].get_nowait()
-                #print('send' + str((j, o)))
-                #self.logger.info('send' + str((j, o)))
-                try:
-                    #self._send(j, pickle.dumps(o))
-                    if j == -1: # -1 means broadcast
-                        for i in range(self.N):
-                            self.sock_queues[i].put_nowait(o)
-                    else:
-                        self.sock_queues[j].put_nowait(o)
-                except Exception as e:
-                    self.logger.error(str(("problem objective when sending", o)))
-                    traceback.print_exc()
-            except:
-                pass
-
-        #print("sending loop quits ...")
 
     def _run(self):
         self.logger = self._set_client_logger(self.id)

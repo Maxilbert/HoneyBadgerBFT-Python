@@ -42,7 +42,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -147,17 +147,14 @@ class Dumbo():
             #print("start recv loop...")
             while True:
                 gevent.sleep(0)
-                try:
-                    (sender, (r, msg) ) = self._recv()
-                    #self.logger.info('recv1' + str((sender, o)))
-                    #print('recv1' + str((sender, o)))
-                    # Maintain an *unbounded* recv queue for each epoch
-                    if r not in self._per_round_recv:
-                        self._per_round_recv[r] = Queue()
-                    # Buffer this message
-                    self._per_round_recv[r].put_nowait((sender, msg))
-                except:
-                    continue
+                (sender, (r, msg) ) = self._recv()
+                #self.logger.info('recv1' + str((sender, o)))
+                #print('recv1' + str((sender, o)))
+                # Maintain an *unbounded* recv queue for each epoch
+                if r not in self._per_round_recv:
+                    self._per_round_recv[r] = Queue()
+                # Buffer this message
+                self._per_round_recv[r].put_nowait((sender, msg))
 
         #self._recv_thread = gevent.spawn(_recv_loop)
         self._recv_thread = Greenlet(_recv_loop)
@@ -221,7 +218,7 @@ class Dumbo():
         else:
             print("node %d breaks" % self.id)
 
-        self._recv_thread.join(timeout=2)
+        #self._recv_thread.join(timeout=2)
 
     #
     def _run_round(self, r, tx_to_send, send, recv):
@@ -333,7 +330,7 @@ class Dumbo():
             for tx in decoded_batch:
                 block.add(tx)
 
-        bc_recv_loop_thread.join(timeout=0)
+        #bc_recv_loop_thread.join(timeout=0)
 
         return list(block)
 

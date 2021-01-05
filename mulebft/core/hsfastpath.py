@@ -11,7 +11,6 @@ import os
 import json
 import gevent
 import hashlib, pickle
-monkey.patch_all()
 
 
 def hash(x):

@@ -1,7 +1,7 @@
 import sys
 if 'threading' in sys.modules:
     raise Exception('threading module loaded before patching!')
-from gevent import monkey; monkey.patch_all(thread=False)
+from gevent import Greenlet, monkey; monkey.patch_all(thread=False)
 
 import time
 import random
@@ -16,15 +16,15 @@ from network.socket_server import NetworkServer
 from network.socket_client import NetworkClient
 
 
-def instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server: Callable, bft_to_client: Callable, net_ready: Event,
+def instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_queue: Queue, send_queues: List[Queue], net_ready: Event,
                          stop: Event, protocol="mule", mute=False, F=100000):
     bft = None
     if protocol == 'dumbo':
-        bft = DumboBFTNode(sid, i, B, N, f, bft_from_server, bft_to_client, net_ready, stop, K, mute=mute)
+        bft = DumboBFTNode(sid, i, B, N, f, recv_queue, send_queues, net_ready, stop, K, mute=mute)
     elif protocol == "mule":
-        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, net_ready, stop, K, mute=mute)
+        bft = MuleBFTNode(sid, i, S, T, B, F, N, f, recv_queue, send_queues, net_ready, stop, K, mute=mute)
     elif protocol == 'hotstuff':
-        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, bft_from_server, bft_to_client, net_ready, stop, 1, mute=mute)
+        bft = HotstuffBFTNode(sid, i, S, T, B, F, N, f, recv_queue, send_queues, net_ready, stop, 1, mute=mute)
     else:
         print("Only support dumbo or dumbox or mule or hotstuff")
     return bft
@@ -98,14 +98,9 @@ if __name__ == '__main__':
         # bft_from_server, server_to_bft = mpPipe(duplex=True)
         # client_from_bft, bft_to_client = mpPipe(duplex=True)
 
-        client_bft_mpq = Queue()
-        #client_from_bft = client_bft_mpq.get
-        client_from_bft = lambda: client_bft_mpq.get()
-        bft_to_client = client_bft_mpq.put_nowait
+        send_queues = [Queue() for _ in range(N)]
 
-        server_bft_mpq = Queue()
-        bft_from_server = lambda: server_bft_mpq.get()
-        server_to_bft = server_bft_mpq.put_nowait
+        recv_queue = Queue()
 
         client_ready = Event()
         client_ready.clear()
@@ -116,9 +111,9 @@ if __name__ == '__main__':
         stop = Event()
         stop.clear()
 
-        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, server_to_bft, server_ready, stop)
-        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, client_from_bft, client_ready, stop)
-        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, bft_from_server, bft_to_client, net_ready, stop, P, M, F)
+        net_server = NetworkServer(my_address[1], my_address[0], i, addresses, recv_queue, server_ready, stop)
+        net_client = NetworkClient(my_address[1], my_address[0], i, addresses, send_queues, client_ready, stop)
+        bft = instantiate_bft_node(sid, i, B, N, f, K, S, T, recv_queue, send_queues, net_ready, stop, P, M, F)
 
         net_server.start()
         net_client.start()
@@ -129,10 +124,10 @@ if __name__ == '__main__':
 
         net_ready.set()
 
-        #bft_thread = Greenlet(bft.run)
-        #bft_thread.start()
-        #bft_thread.join()
-        bft.run()
+        bft_thread = Greenlet(bft.run)
+        bft_thread.start()
+        bft_thread.join()
+        #bft.run()
 
         stop.set()
 

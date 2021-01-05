@@ -42,7 +42,7 @@ BroadcastReceiverQueues = namedtuple(
 
 def broadcast_receiver_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
         sender, (tag, j, msg) = recv_func()
         if tag not in BroadcastTag.__members__:
             # TODO Post python 3 port: Add exception chaining.
@@ -126,27 +126,11 @@ class Dumbo():
     def run_bft(self):
         """Run the Dumbo protocol."""
 
-        if self.mute:
-
-            def send_blackhole(*args):
-                pass
-
-            def recv_blackhole(*args):
-                while True:
-                    gevent.sleep(1)
-                    time.sleep(1)
-                    pass
-
-            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
-            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
-                self._send = send_blackhole
-                self._recv = recv_blackhole
-
         def _recv_loop():
             """Receive messages."""
             #print("start recv loop...")
             while True:
-                gevent.sleep(0)
+                #gevent.sleep(0)
                 (sender, (r, msg) ) = self._recv()
                 #self.logger.info('recv1' + str((sender, o)))
                 #print('recv1' + str((sender, o)))
@@ -167,7 +151,7 @@ class Dumbo():
         while True:
 
             # For each round...
-            gevent.sleep(0)
+            #gevent.sleep(0)
 
             start = time.time()
 

@@ -133,11 +133,11 @@ if __name__ == '__main__':
 
         #net_client.stop_service()
         net_client.kill(timeout=1)
-        net_client.join()
+        #net_client.join()
         time.sleep(1)
         #net_server.stop_service()
         net_client.kill(timeout=1)
-        net_server.join()
+        #net_server.join()
 
 
     except FileNotFoundError or AssertionError as e:

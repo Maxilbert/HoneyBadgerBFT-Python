@@ -45,7 +45,7 @@ class DumboBFTNode (Dumbo):
                 else:
                     send_queues[j].put_nowait(o)
             return send
-        
+
         self.send = make_send()
         self.recv = lambda: recv_queue.get()
         self.ready = net_ready

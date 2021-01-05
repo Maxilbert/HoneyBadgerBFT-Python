@@ -90,7 +90,7 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
     def _recv():
         while True:  # not finished[pid]:
-            gevent.sleep(0.0001)
+            #gevent.sleep(0.0001)
 
             (sender, msg) = receive()
             logger.debug(f'receive {msg} from node {sender}',
@@ -210,6 +210,7 @@ def baisedbinaryagreement(sid, pid, N, f, coin, input, decide, receive, send):
         logger.debug(
             f'block until at least N-f ({N-f}) AUX values are received',
             extra={'nodeid': pid, 'epoch': r})
+
         while True:
 
             logger.debug(f'bin_values[{r}]: {bin_values[r]}',

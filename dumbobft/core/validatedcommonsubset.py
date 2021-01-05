@@ -21,7 +21,7 @@ MessageReceiverQueues = namedtuple(
 
 def vacs_msg_receiving_loop(recv_func, recv_queues):
     while True:
-        gevent.sleep(0.0001)
+        #gevent.sleep(0.0001)
         sender, (tag, msg) = recv_func()
         # print(sender, (tag, msg))
         if tag not in MessageTag.__members__:
@@ -127,7 +127,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     values = [None] * N
     while True:
-        gevent.sleep(0)
+        #gevent.sleep(0)
         j, vj = value_recv.get()
         if predicate(j, vj):
             valueSenders.add(j)

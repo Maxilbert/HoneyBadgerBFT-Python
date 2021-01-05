@@ -155,7 +155,7 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
         return m
 
     while True:  # main receive loop
-        gevent.sleep(0.0001)
+        #gevent.sleep(0.0001)
 
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:

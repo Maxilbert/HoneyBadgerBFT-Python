@@ -189,10 +189,12 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     cbc_values = [None] * N
 
-    v = input()
-    start = time.time()
-    #assert predicate(v)
-    my_cbc_input.put_nowait(v)
+    def wait_for_input():
+        v = input()
+        #assert predicate(v)
+        my_cbc_input.put_nowait(v)
+
+    gevent.spawn(wait_for_input)
 
     wait_cbc_signal = Event()
     wait_cbc_signal.clear()
@@ -346,8 +348,5 @@ def validatedagreement(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive,
 
     assert a is not None
 
-    end = time.time()
-    if logger != None:
-        logger.info("MVBA %s spends %f seconds to complete" % (sid, end - start))
 
     decide(cbc_values[a][0])  # In rare cases, there could return None. We let higher level caller of VABA to deal that

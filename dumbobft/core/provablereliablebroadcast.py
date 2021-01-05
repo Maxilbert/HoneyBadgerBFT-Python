@@ -113,25 +113,21 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
     if pid == leader:
         # The leader erasure encodes the input, sending one strip to each participant
         #print("block to wait for RBC input")
-        m = input()  # block until an input is received
-        start = time.time()
 
-        #print("RBC input received: ", m)
-        # XXX Python 3 related issue, for now let's tolerate both bytes and
-        # strings
-        # (with Python 2 it used to be: assert type(m) is str)
-        # assert isinstance(m, (str, bytes))
-        # print('Input received: %d bytes' % (len(m),))
+        def wait_for_input():
+            m = input()  # block until an input is received
+            #print("RBC input received: ", m)
+            # assert isinstance(m, (str, bytes))
+            # print('Input received: %d bytes' % (len(m),))
+            stripes = encode(K, N, m)
+            mt = merkleTree(stripes)  # full binary tree
+            roothash = mt[1]
+            for i in range(N):
+                branch = getMerkleBranch(i, mt)
+                send(i, ('VAL', roothash, branch, stripes[i]))
+            #print("encoding time: " + str(end - start))
 
-        stripes = encode(K, N, m)
-        mt = merkleTree(stripes)  # full binary tree
-        roothash = mt[1]
-        for i in range(N):
-            branch = getMerkleBranch(i, mt)
-            send(i, ('VAL', roothash, branch, stripes[i]))
-
-
-        #print("encoding time: " + str(end - start))
+        gevent.spawn(wait_for_input)
 
     # TODO: filter policy: if leader, discard all messages until sending VAL
 
@@ -237,6 +233,5 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
                 proof = (sid, roothash, serialize(Sigma))
                 #print("RBC finished for leader", leader)
                 end = time.time()
-                if logger != None and pid == leader:
-                    logger.info("RBC %s spends %f seconds to complete" % (sid, end-start))
+
                 return value, proof

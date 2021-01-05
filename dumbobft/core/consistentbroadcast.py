@@ -41,9 +41,6 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
                 where Sigma is computed over {sigma_i} in these ``CBC_ECHO`` messages
     """
 
-    def bcast(o):
-        send(-1, o)
-
     assert N >= 3*f + 1
     assert f >= 0
     assert 0 <= leader < N
@@ -61,16 +58,16 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
     if pid == leader:
         # The leader sends the input to each participant
         #print("block to wait for CBC input")
-        m = input() # block until an input is received
-        start = time.time()
-
-        #print("CBC input received: ", m)
-        assert isinstance(m, (str, bytes, list, tuple))
-        digestFromLeader = PK1.hash_message(str((sid, leader, m)))
-        # print("leader", pid, "has digest:", digestFromLeader)
-        cbc_echo_sshares[pid] = SK1.sign(digestFromLeader)
-        bcast(('CBC_SEND', m))
-        #print("Leader %d broadcasts CBC SEND messages" % leader)
+        def wait_for_input():
+            m = input() # block until an input is received
+            #print("CBC input received: ", m)
+            #assert isinstance(m, (str, bytes, list, tuple))
+            digestFromLeader = PK1.hash_message(str((sid, leader, m)))
+            # print("leader", pid, "has digest:", digestFromLeader)
+            cbc_echo_sshares[pid] = SK1.sign(digestFromLeader)
+            send(-1, ('CBC_SEND', m))
+            #print("Leader %d broadcasts CBC SEND messages" % leader)
+        gevent.spawn(wait_for_input)
 
     # Handle all consensus messages
     while True:
@@ -110,7 +107,7 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
                 Sigma = PK1.combine_shares(sigmas)
                 # assert PK.verify_signature(Sigma, digestFromLeader)
                 finalSent = True
-                bcast(('CBC_FINAL', m, serialize(Sigma)))
+                send(-1, ('CBC_FINAL', m, serialize(Sigma)))
                 #print("Leader %d broadcasts CBC FINAL messages" % leader)
 
         elif msg[0] == 'CBC_FINAL':
@@ -130,6 +127,5 @@ def consistentbroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, send, 
                 continue
             #print("CBC finished for leader", leader)
             end = time.time()
-            if logger != None and pid == leader:
-                logger.info("CBC %s spends %f seconds to complete" % (sid, end - start))
+
             return m, raw_Sigma

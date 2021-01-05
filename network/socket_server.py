@@ -62,6 +62,9 @@ class NetworkServer (Greenlet):
         self.streamServer = StreamServer((self.ip, self.port), _handler)
         self.streamServer.serve_forever()
 
+        self.stop.wait()
+        self.streamServer.stop()
+
     def _run(self):
         pid = os.getpid()
         self.logger = self._set_server_logger(self.id)
@@ -69,8 +72,6 @@ class NetworkServer (Greenlet):
         self.ready.clear()
         self._listen_and_recv_forever()
 
-    def stop_service(self):
-        self.stop.set()
 
     def _address_to_id(self, address: tuple):
         for i in range(self.N):

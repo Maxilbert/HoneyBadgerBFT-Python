@@ -131,12 +131,8 @@ if __name__ == '__main__':
 
         stop.set()
 
-        #net_client.stop_service()
-        net_client.kill(timeout=1)
+        #net_client.kill(timeout=1)
         #net_client.join()
-        time.sleep(1)
-        #net_server.stop_service()
-        net_client.kill(timeout=1)
         #net_server.join()
 
 

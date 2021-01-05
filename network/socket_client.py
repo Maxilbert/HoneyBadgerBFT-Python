@@ -53,7 +53,9 @@ class NetworkClient (Greenlet):
                 self.logger.info(str((e, traceback.print_exc())))
         send_threads = [gevent.spawn(self._send, j) for j in range(self.N)]
         #self._handle_send_loop()
-        gevent.joinall(send_threads)
+        #gevent.joinall(send_threads)
+        self.stop.wait()
+        gevent.killall(send_threads)
 
     def _connect(self, j: int):
         sock = socket.socket()
@@ -68,7 +70,7 @@ class NetworkClient (Greenlet):
 
     def _send(self, j: int):
         while not self.stop.is_set():
-            gevent.sleep(0)
+            #gevent.sleep(0)
             #self.sock_locks[j].acquire()
             o = self.send_queues[j].get()
             try:
@@ -86,10 +88,6 @@ class NetworkClient (Greenlet):
         self.logger.info('node id %d is running on pid %d' % (self.id, pid))
         self.ready.clear()
         self._connect_and_send_forever()
-
-
-    def stop_service(self):
-        self.stop.set()
 
 
     def _set_client_logger(self, id: int):

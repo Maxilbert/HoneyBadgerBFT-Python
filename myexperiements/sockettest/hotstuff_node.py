@@ -1,3 +1,6 @@
+from gevent import Greenlet, monkey; monkey.patch_all()
+
+
 from gevent.queue import Queue
 
 from stablehotstuff.stablehotstuff import Hotstuff

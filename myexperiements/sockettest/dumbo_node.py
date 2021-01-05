@@ -1,3 +1,5 @@
+from gevent import Greenlet, monkey; monkey.patch_all()
+
 import random
 from typing import Callable, List
 import os

@@ -1,3 +1,6 @@
+from gevent import Greenlet, monkey; monkey.patch_all()
+
+
 import gevent
 from gevent import monkey
 from gevent.event import Event

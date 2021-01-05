@@ -1,3 +1,6 @@
+from gevent import Greenlet, monkey; monkey.patch_all()
+
+
 import time
 import gevent
 from gevent import monkey
@@ -5,7 +8,6 @@ from crypto.threshenc import tpke
 import os, logging
 
 
-logger = logging.getLogger(__name__)
 
 
 def tpke_serialize(g):

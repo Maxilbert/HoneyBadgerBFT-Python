@@ -1,4 +1,6 @@
-# coding=utf-8
+from gevent import Greenlet, monkey; monkey.patch_all()
+
+
 from collections import defaultdict
 
 import gevent

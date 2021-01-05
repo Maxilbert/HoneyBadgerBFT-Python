@@ -7,7 +7,7 @@ import time
 import numpy as np
 from gevent import monkey, Greenlet
 from gevent.queue import Queue
-from mulebft.core.hsfastpath import hsfastpath
+from stablehotstuff.hsfastpath_notimeout import hsfastpath_notimeout
 from crypto.threshsig.boldyreva import TBLSPrivateKey, TBLSPublicKey
 from crypto.ecdsa.ecdsa import PrivateKey
 
@@ -56,7 +56,6 @@ class Hotstuff():
     def __init__(self, sid, pid, S, Bfast, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
 
         self.SLOTS_NUM = S
-        self.TIMEOUT = 10000
         self.FAST_BATCH_SIZE = Bfast
 
         self.sid = sid
@@ -96,22 +95,6 @@ class Hotstuff():
 
     def run_bft(self):
         """Run the Mule protocol."""
-
-        if self.mute:
-
-            def send_blackhole(*args):
-                pass
-
-            def recv_blackhole(*args):
-                while True:
-                    gevent.sleep(1)
-                    time.sleep(1)
-                    pass
-
-            seed = int.from_bytes(self.sid.encode('utf-8'), 'little')
-            if self.id in np.random.RandomState(seed).permutation(self.N)[:int((self.N - 1) / 3)]:
-                self._send = send_blackhole
-                self._recv = recv_blackhole
 
         def _recv_loop():
             """Receive messages."""
@@ -168,16 +151,16 @@ class Hotstuff():
         # Start the fast path
         leader = 0
 
-        fast_thread = gevent.spawn(hsfastpath, epoch_id, pid, N, f, leader,
+        fast_thread = gevent.spawn(hsfastpath_notimeout, epoch_id, pid, N, f, leader,
                             self.transaction_buffer.get_nowait, None,
-                            self.SLOTS_NUM, self.FAST_BATCH_SIZE, self.TIMEOUT,
+                            self.SLOTS_NUM, self.FAST_BATCH_SIZE,
                             hash_genesis, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                             recv, send, self.logger)
         fast_thread.join()
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         try:
-            notarization = fast_thread.get(block=False)
+            notarization = fast_thread.get_nowait()
             notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
             self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
             self.txcnt += epoch_txcnt

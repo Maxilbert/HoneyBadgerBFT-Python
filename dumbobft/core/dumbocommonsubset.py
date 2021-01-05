@@ -1,9 +1,11 @@
+from datetime import datetime
+
 import gevent
 from gevent import monkey
 
 
 
-def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
+def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out, logger=None):
     """The BKR93 algorithm for asynchronous common subset.
 
     :param pid: my identifier
@@ -37,6 +39,8 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
         is_prbc_delivered[leader] = 1
         if leader == pid:
             vacs_in(prbc_proofs[leader])
+            if logger != None:
+                logger.info("DumboACS transfers prbc out to vacs in at %s" % datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
 
     prbc_threads = [gevent.spawn(wait_for_prbc_to_continue, j) for j in range(N)]
 

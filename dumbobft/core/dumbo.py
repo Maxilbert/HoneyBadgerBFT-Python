@@ -304,8 +304,6 @@ class Dumbo():
 
         dumboacs_thread.start()
 
-
-
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),
                           acs_put_in=my_prbc_input.put_nowait, acs_get_out=dumboacs_thread.get,
@@ -317,7 +315,7 @@ class Dumbo():
             for tx in decoded_batch:
                 block.add(tx)
 
-        #bc_recv_loop_thread.join(timeout=0)
+        bc_recv_loop_thread.kill()
 
         return list(block)
 

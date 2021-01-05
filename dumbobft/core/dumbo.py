@@ -266,6 +266,7 @@ class Dumbo():
 
             def vacs_send(k, o):
                 """Threshold encryption broadcast."""
+                """Threshold encryption broadcast."""
                 send(k, ('ACS_VACS', '', o))
 
             def vacs_predicate(j, vj):
@@ -300,7 +301,7 @@ class Dumbo():
         # One instance of ACS pid, N, f, prbc_out, vacs_in, vacs_out
         dumboacs_thread = Greenlet(dumbocommonsubset, pid, N, f, prbc_outputs,
                            vacs_input.put_nowait,
-                           vacs_output.get)
+                           vacs_output.get, self.logger)
 
         dumboacs_thread.start()
 

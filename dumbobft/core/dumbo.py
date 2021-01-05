@@ -229,6 +229,16 @@ class Dumbo():
         prbc_outputs = [Queue(1) for _ in range(N)]
         vacs_output = Queue(1)
 
+
+        recv_queues = BroadcastReceiverQueues(
+            ACS_PRBC=prbc_recvs,
+            ACS_VACS=vacs_recv,
+            TPKE=tpke_recv,
+        )
+
+        bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
+        bc_recv_loop_thread.start()
+
         #print(pid, r, 'tx_to_send:', tx_to_send)
         #if self.logger != None:
         #    self.logger.info('Commit tx at Node %d:' % self.id + str(tx_to_send))
@@ -294,14 +304,7 @@ class Dumbo():
 
         dumboacs_thread.start()
 
-        recv_queues = BroadcastReceiverQueues(
-            ACS_PRBC=prbc_recvs,
-            ACS_VACS=vacs_recv,
-            TPKE=tpke_recv,
-        )
 
-        bc_recv_loop_thread = Greenlet(broadcast_receiver_loop, recv, recv_queues)
-        bc_recv_loop_thread.start()
 
         _output = honeybadger_block(pid, self.N, self.f, self.ePK, self.eSK,
                           propose=json.dumps(tx_to_send),

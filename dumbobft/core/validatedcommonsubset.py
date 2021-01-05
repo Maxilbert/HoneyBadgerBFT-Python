@@ -143,7 +143,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
-    
+
     if logger != None:
         logger.info("VACS %s completes at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
 

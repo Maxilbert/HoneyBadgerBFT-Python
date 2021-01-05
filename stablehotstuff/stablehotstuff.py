@@ -160,7 +160,7 @@ class Hotstuff():
 
         # Get the returned notarization of the fast path, which contains the combined Signature for the tip of chain
         try:
-            notarization = fast_thread.get_nowait()
+            notarization = fast_thread.get(block=False)
             notarized_block_hash, notarized_block_raw_Sig, (epoch_txcnt, weighted_delay) = notarization
             self.txdelay = (self.txcnt * self.txdelay + epoch_txcnt * weighted_delay) / (self.txcnt + epoch_txcnt)
             self.txcnt += epoch_txcnt

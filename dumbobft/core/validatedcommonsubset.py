@@ -1,3 +1,4 @@
+import time
 import traceback
 import gevent
 from collections import namedtuple
@@ -119,11 +120,12 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     """ 
     """
 
-    v = input()
-    #assert predicate(pid, v)
+    def broadcast_input():
+        v = input()
+        #assert predicate(pid, v)
+        send(-1, ('VACS_VAL', v))
 
-    for k in range(N):
-        send(k, ('VACS_VAL', v))
+    gevent.spawn(broadcast_input)
 
     values = [None] * N
     while True:
@@ -137,4 +139,5 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
     vaba_input.put_nowait(tuple(values))
     decide(list(vaba_output.get()))
-    #vaba.kill()
+
+    vaba.kill()

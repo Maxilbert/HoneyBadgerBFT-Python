@@ -43,7 +43,7 @@ def dumbocommonsubset(pid, N, f, prbc_out, vacs_in, vacs_out):
     prbc_proofs_vector = vacs_out()
 
     if prbc_proofs_vector is not None:
-        assert type(prbc_proofs_vector) == list and len(prbc_proofs_vector) == N
+        #assert type(prbc_proofs_vector) == list and len(prbc_proofs_vector) == N
         for j in range(N):
             if prbc_proofs_vector[j] is not None:
                 prbc_threads[j].join()

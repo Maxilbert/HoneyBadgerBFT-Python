@@ -36,7 +36,6 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True, log
     #assert PK.k == f+1
     #assert PK.l == N    # noqa: E741
 
-    start = time.time()
 
     received = defaultdict(dict)
     outputQueue = defaultdict(lambda: Queue(1))
@@ -99,6 +98,9 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True, log
         :returns: a coin.
 
         """
+
+        start = time.time()
+
         # I have to do mapping to 1..l
         h = PK.hash_message(str((sid, round)))
         h.initPP()
@@ -114,6 +116,7 @@ def shared_coin(sid, pid, N, f, PK, SK, broadcast, receive, single_bit=True, log
         PK.verify_share(sig, pid, h)
         coin = outputQueue[round].get()
         #print('debug', 'node %d gets a coin %d for round %d in %s' % (pid, coin, round, sid))
+
         end = time.time()
         if logger != None:
             logger.info("Coin %s spends %f seconds to complete" % (sid, end-start))

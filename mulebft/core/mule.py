@@ -12,6 +12,8 @@ from gevent.event import Event
 from gevent.queue import Queue
 from collections import namedtuple
 from enum import Enum
+
+from dumbobft.core.validators import prbc_validate
 from mulebft.core.hsfastpath import hsfastpath
 from mulebft.core.twovalueagreement import twovalueagreement
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
@@ -464,7 +466,7 @@ class Mule():
 
                 # Only leader gets input
                 prbc_input = my_prbc_input.get if j == pid else None
-                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+                prbc = gevent.spawn(provablereliablebroadcast, epoch_id+'PRBC'+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
                                    prbc_input, prbc_recvs[j].get, prbc_send)
                 prbc_outputs[j] = prbc.get  # block for output from rbc
 
@@ -475,16 +477,17 @@ class Mule():
                     send(k, ('ACS_VACS', '', o))
 
                 def vacs_predicate(j, vj):
+                    prbc_sid = epoch_id+'PRBC'+str(j)
                     try:
-                        sid, roothash, raw_Sig = vj
-                        digest = self.sPK1.hash_message(str((sid, j, roothash)))
-                        assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
+                        proof = vj
+                        assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                         return True
                     except AssertionError:
-                        print("Failed to verify proof for RBC")
+                        print("2 Failed to verify proof for RBC")
                         return False
 
-                gevent.spawn(validatedcommonsubset, epoch_id+'VACS', pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
+                gevent.spawn(validatedcommonsubset, epoch_id+'VACS', pid, N, f,
+                             self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
                              vacs_input.get, vacs_output.put_nowait,
                              vacs_recv.get, vacs_send, vacs_predicate)
 

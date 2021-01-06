@@ -5,46 +5,11 @@ from gevent import Greenlet, monkey; monkey.patch_all()
 from datetime import datetime
 import time
 from collections import defaultdict
-from typing import List
 import gevent
-from gevent import monkey
 from crypto.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from honeybadgerbft.core.reliablebroadcast import encode, decode
-#from pyeclib.ec_iface import ECDriver
-
-
-#
-# def encode(K: int, N: int, m):
-#     coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-#     assert coder.k == K
-#     assert coder.m == N - K
-#     try:
-#         m = m.encode()
-#     except AttributeError:
-#         pass
-#     stripes = [_ for _ in coder.encode(m)]
-#     #assert len(stripes[0]) == len(stripes[-1])
-#     #print(str(len(stripes[0])))
-#     return stripes
-#
-# def decode(K: int, N: int, stripes: List[bytes]):
-#     coder = ECDriver(k=K, m=N-K, ec_type='isa_l_rs_vand')
-#     #assert len(stripes) == N
-#     #assert len(stripes) == coder.k + coder.m
-#     blocks = []
-#     for block in stripes:
-#         if block is None:
-#             continue
-#         blocks.append(block)
-#         if len(blocks) == K:
-#             break
-#     else:
-#         raise ValueError("Too few to recover")
-#     rec = coder.decode(blocks)
-#     return rec
-
 
 
 
@@ -149,20 +114,15 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
 
     def decode_output(roothash):
         # Rebuild the merkle tree to guarantee decoding is correct
-        start = time.time()
         m = decode(K, N, stripes[roothash])
         _stripes = encode(K, N, m)
         _mt = merkleTree(_stripes)
         _roothash = _mt[1]
         # TODO: Accountability: If this fails, incriminate leader
         assert _roothash == roothash
-        end = time.time()
-        #print("decoding time:" + str(end - start))
         return m
 
     while True:  # main receive loop
-        #gevent.sleep(0.0001)
-
         sender, msg = receive()
         if msg[0] == 'VAL' and fromLeader is None:
             # Validation
@@ -175,7 +135,6 @@ def provablereliablebroadcast(sid, pid, N, f, PK1, SK1, leader, input, receive, 
             except Exception as e:
                 print("Failed to validate VAL message:", e)
                 continue
-
             # Update
             fromLeader = roothash
             broadcast(('ECHO', roothash, branch, stripe))

@@ -1,6 +1,3 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
-
 from datetime import datetime
 
 import gevent

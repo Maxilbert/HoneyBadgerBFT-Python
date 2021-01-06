@@ -1,6 +1,3 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
-
 import json
 import logging
 import os
@@ -14,6 +11,7 @@ from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
+from dumbobft.core.externalvalidation import prbc_validate
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
@@ -80,6 +78,8 @@ class Dumbo():
         (:math:`\mathsf{TSIG}`) scheme.
     :param TBLSPrivateKey sSK1: Signing key of the (N-f, N) threshold signature
         (:math:`\mathsf{TSIG}`) scheme.
+    :param list sPK2s: Public key(s) of ECDSA signature for all N parties.
+    :param PrivateKey sSK2: Signing key of ECDSA signature.
     :param str ePK: Public key of the threshold encryption
         (:math:`\mathsf{TPKE}`) scheme.
     :param str eSK: Signing key of the threshold encryption
@@ -89,7 +89,7 @@ class Dumbo():
     :param K: a test parameter to specify break out after K rounds
     """
 
-    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, ePK, eSK, send, recv, K=3, mute=False):
+    def __init__(self, sid, pid, B, N, f, sPK, sSK, sPK1, sSK1, sPK2s, sSK2, ePK, eSK, send, recv, K=3, mute=False):
         self.sid = sid
         self.id = pid
         self.B = B
@@ -99,6 +99,8 @@ class Dumbo():
         self.sSK = sSK
         self.sPK1 = sPK1
         self.sSK1 = sSK1
+        self.sPK2s = sPK2s
+        self.sSK2 = sSK2
         self.ePK = ePK
         self.eSK = eSK
         self._send = send
@@ -260,7 +262,7 @@ class Dumbo():
 
             # Only leader gets input
             prbc_input = my_prbc_input.get if j == pid else None
-            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK1, self.sSK1, j,
+            prbc_thread = Greenlet(provablereliablebroadcast, sid+'PRBC'+str(r)+str(j), pid, N, f, self.sPK2s, self.sSK2, j,
                                prbc_input, prbc_recvs[j].get, prbc_send, self.logger)
             prbc_thread.start()
             prbc_outputs[j] = prbc_thread.get  # block for output from rbc
@@ -273,13 +275,13 @@ class Dumbo():
                 send(k, ('ACS_VACS', '', o))
 
             def vacs_predicate(j, vj):
+                prbc_sid = sid + 'PRBC' + str(r) + str(j)
                 try:
-                    sid, roothash, raw_Sig = vj
-                    digest = self.sPK1.hash_message(str((sid, j, roothash)))
-                    assert self.sPK1.verify_signature(deserialize1(raw_Sig), digest)
+                    proof = vj
+                    assert prbc_validate(prbc_sid, N, f, self.sPK2s, proof)
                     return True
                 except AssertionError:
-                    print("Failed to verify proof for RBC")
+                    print("2 Failed to verify proof for RBC")
                     return False
 
             vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,

@@ -1,6 +1,3 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
-
 import time
 import gevent
 from gevent import monkey

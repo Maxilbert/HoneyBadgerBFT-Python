@@ -1,6 +1,3 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
-
 import hashlib
 import json
 import logging

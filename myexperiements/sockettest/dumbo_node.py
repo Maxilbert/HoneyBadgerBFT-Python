@@ -1,5 +1,4 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
+from coincurve import PrivateKey, PublicKey
 import random
 from typing import Callable, List
 import os
@@ -19,6 +18,11 @@ def load_key(id, N):
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK1.key', 'rb') as fp:
         sPK1 = pickle.load(fp)
 
+    sPK2s = []
+    for i in range(N):
+        with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sPK2-' + str(i) + '.key', 'rb') as fp:
+            sPK2s.append(PublicKey(pickle.load(fp)))
+
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'ePK.key', 'rb') as fp:
         ePK = pickle.load(fp)
 
@@ -28,16 +32,18 @@ def load_key(id, N):
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK1-' + str(id) + '.key', 'rb') as fp:
         sSK1 = pickle.load(fp)
 
+    with open(os.getcwd() + '/keys-' + str(N) + '/' + 'sSK2-' + str(id) + '.key', 'rb') as fp:
+        sSK2 = PrivateKey(pickle.load(fp))
+
     with open(os.getcwd() + '/keys-' + str(N) + '/' + 'eSK-' + str(id) + '.key', 'rb') as fp:
         eSK = pickle.load(fp)
 
-    return sPK, sPK1, ePK, sSK, sSK1, eSK
-
+    return sPK, sPK1, sPK2s, ePK, sSK, sSK1, sSK2, eSK
 
 class DumboBFTNode (Dumbo):
 
     def __init__(self, sid, id, B, N, f, recv_queue: Queue, send_queues: List[Queue], net_ready: Event, stop: Event, K=3, mode='debug', mute=False, tx_buffer=None):
-        self.sPK, self.sPK1, self.ePK, self.sSK, self.sSK1, self.eSK = load_key(id, N)
+        self.sPK, self.sPK1, self.sPK2s, self.ePK, self.sSK, self.sSK1, self.sSK2, self.eSK = load_key(id, N)
 
         def make_send():
             def send(j, o):
@@ -53,7 +59,7 @@ class DumboBFTNode (Dumbo):
         self.ready = net_ready
         self.stop = stop
         self.mode = mode
-        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
+        Dumbo.__init__(self, sid, id, max(int(B/N), 1), N, f, self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2, self.ePK, self.eSK, self.send, self.recv, K=K, mute=mute)
 
     def prepare_bootstrap(self):
         self.logger.info('node id %d is inserting dummy payload TXs' % (self.id))

@@ -1,7 +1,7 @@
 import sys
 if 'threading' in sys.modules:
     raise Exception('threading module loaded before patching!')
-from gevent import Greenlet, monkey; monkey.patch_all()
+from gevent import Greenlet, monkey; monkey.patch_all(thread=False)
 
 import time
 import random

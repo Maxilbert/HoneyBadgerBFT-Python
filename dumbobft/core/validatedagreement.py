@@ -1,5 +1,3 @@
-from gevent import Greenlet, monkey; monkey.patch_all()
-
 import copy
 import time
 import traceback

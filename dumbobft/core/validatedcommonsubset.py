@@ -40,7 +40,7 @@ def vacs_msg_receiving_loop(recv_func, recv_queues):
             traceback.print_exc(e)
 
 
-def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, receive, send, predicate=lambda i, v: True, logger=None):
+def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, PK2s, SK2, input, decide, receive, send, predicate=lambda i, v: True, logger=None):
     """Validated vector consensus. It takes an input ``vi`` and will
     finally writes the decided value (i.e., a vector of different nodes' vi) into ``decide`` channel.
     Each vi is validated by a predicate function predicate(i, vi)
@@ -53,6 +53,8 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
     :param SK: ``boldyreva.TBLSPrivateKey`` with threshold f+1
     :param PK1: ``boldyreva.TBLSPublicKey`` with threshold n-f
     :param SK1: ``boldyreva.TBLSPrivateKey`` with threshold n-f
+    :param list PK2s: an array of ``coincurve.PublicKey'', i.e., N public keys of ECDSA for all parties
+    :param PublicKey SK2: ``coincurve.PrivateKey'', i.e., secret key of ECDSA
     :param input: ``input()`` is called to receive an input
     :param decide: ``decide()`` is eventually called
     :param receive: receive channel
@@ -111,7 +113,7 @@ def validatedcommonsubset(sid, pid, N, f, PK, SK, PK1, SK1, input, decide, recei
 
         return vaba_predicate
 
-    vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1,
+    vaba = gevent.spawn(validatedagreement, sid + 'VACS-VABA', pid, N, f, PK, SK, PK1, SK1, PK2s, SK2,
                         vaba_input.get, vaba_output.put_nowait, vaba_recv.get, make_vaba_send(), make_vaba_predicate(), logger)
 
     """ 

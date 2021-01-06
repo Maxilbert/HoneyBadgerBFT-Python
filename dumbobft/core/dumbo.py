@@ -11,7 +11,7 @@ from gevent.queue import Queue
 from dumbobft.core.dumbocommonsubset import dumbocommonsubset
 from dumbobft.core.provablereliablebroadcast import provablereliablebroadcast
 from dumbobft.core.validatedcommonsubset import validatedcommonsubset
-from dumbobft.core.externalvalidation import prbc_validate
+from dumbobft.core.validators import prbc_validate
 from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.honeybadger_block import honeybadger_block
 from honeybadgerbft.exceptions import UnknownTagError
@@ -284,9 +284,10 @@ class Dumbo():
                     print("2 Failed to verify proof for RBC")
                     return False
 
-            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f, self.sPK, self.sSK, self.sPK1, self.sSK1,
-                         vacs_input.get, vacs_output.put_nowait,
-                         vacs_recv.get, vacs_send, vacs_predicate, self.logger)
+            vacs_thread = Greenlet(validatedcommonsubset, sid+'VACS'+str(r), pid, N, f,
+                                   self.sPK, self.sSK, self.sPK1, self.sSK1, self.sPK2s, self.sSK2,
+                                   vacs_input.get, vacs_output.put_nowait,
+                                   vacs_recv.get, vacs_send, vacs_predicate, self.logger)
             vacs_thread.start()
 
         # N instances of PRBC

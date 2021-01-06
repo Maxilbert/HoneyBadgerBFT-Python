@@ -3,7 +3,6 @@ import time
 from collections import defaultdict
 import gevent
 from crypto.ecdsa.ecdsa import ecdsa_vrfy, ecdsa_sign
-from crypto.threshsig.boldyreva import serialize, deserialize1
 from honeybadgerbft.core.reliablebroadcast import merkleTree, getMerkleBranch, merkleVerify
 from honeybadgerbft.core.reliablebroadcast import encode, decode
 import hashlib, pickle
@@ -83,23 +82,20 @@ def provablereliablebroadcast(sid, pid, N, f,  PK2s, SK2, leader, input, receive
     if pid == leader:
         # The leader erasure encodes the input, sending one strip to each participant
         #print("block to wait for RBC input")
+        m = input()  # block until an input is received
+        #print("RBC input received: ", m)
+        if logger != None:
+            logger.info("ABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
+        # assert isinstance(m, (str, bytes))
+        # print('Input received: %d bytes' % (len(m),))
+        stripes = encode(K, N, m)
+        mt = merkleTree(stripes)  # full binary tree
+        roothash = mt[1]
+        for i in range(N):
+            branch = getMerkleBranch(i, mt)
+            send(i, ('VAL', roothash, branch, stripes[i]))
+        #print("encoding time: " + str(end - start))
 
-        def wait_for_input():
-            m = input()  # block until an input is received
-            #print("RBC input received: ", m)
-            if logger != None:
-                logger.info("ABA %s get input at %s" % (sid, datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]))
-            # assert isinstance(m, (str, bytes))
-            # print('Input received: %d bytes' % (len(m),))
-            stripes = encode(K, N, m)
-            mt = merkleTree(stripes)  # full binary tree
-            roothash = mt[1]
-            for i in range(N):
-                branch = getMerkleBranch(i, mt)
-                send(i, ('VAL', roothash, branch, stripes[i]))
-            #print("encoding time: " + str(end - start))
-
-        gevent.spawn(wait_for_input)
 
     # TODO: filter policy: if leader, discard all messages until sending VAL
 

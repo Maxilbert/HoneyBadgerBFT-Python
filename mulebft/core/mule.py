@@ -337,9 +337,6 @@ class Mule():
 
             while True:
 
-                gevent.sleep(0)
-                time.sleep(0)
-
                 j, (notarized_block_header_j, notarized_block_Sig_j) = viewchange_recv.get()
                 if notarized_block_Sig_j is not None:
                     (_, slot_num, Sig_p, _) = notarized_block_header_j
@@ -364,7 +361,6 @@ class Mule():
                 if viewchange_counter >= N - f:
                     tcvba_input.put_nowait(viewchange_max_slot)
                     break
-
 
         # Start the fast path
 
@@ -503,7 +499,6 @@ class Mule():
                 """Threshold encryption broadcast."""
                 def broadcast(o):
                     """Multicast the given input ``o``.
-
                     :param o: Input to multicast.
                     """
                     for j in range(N):

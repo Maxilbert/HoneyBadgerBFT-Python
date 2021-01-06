@@ -124,9 +124,9 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
     # Block waiting for the input
     # print(pid, sid, 'PRE-ENTERING CRITICAL')
+
     vi = input()
     # print(pid, sid, 'PRE-EXITING CRITICAL', vi)
-
     assert type(vi) is int
     est = vi
     r = 0
@@ -156,12 +156,7 @@ def twovalueagreement(sid, pid, N, f, coin, input, decide, receive, send):
 
         broadcast(('AUX', r, w))
 
-
-
         while True:
-
-            #gevent.sleep(0)
-
 
             len_int_values = len(int_values[r])
             assert len_int_values == 1 or len_int_values == 2
